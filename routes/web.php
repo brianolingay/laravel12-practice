@@ -50,7 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $user = request()->user();
 
         return Inertia::render('pricing-rules/index', [
-            'pricingRules' => PricingRule::query()
+            'initialPricingRules' => PricingRule::query()
                 ->with('pricingModule')
                 ->forTenant($user->tenant_id)
                 ->orderBy('pricing_module_id')
@@ -71,6 +71,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->get(),
         ]);
     })->name('statements.index');
+
+    Route::get('statements/{statement}', function (BillingStatement $statement) {
+        Gate::authorize('view', $statement);
+
+        $statement->load('lineItems');
+
+        return Inertia::render('statements/show', [
+            'statement' => $statement,
+            'lineItems' => $statement->lineItems,
+        ]);
+    })->name('statements.show');
 
     Route::get('audit-log', function () {
         Gate::authorize('viewAny', LedgerEvent::class);

@@ -38,7 +38,7 @@ interface PricingRuleItem {
 }
 
 interface PricingRulesPageProps {
-    pricingRules: PricingRuleItem[];
+    initialPricingRules: PricingRuleItem[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -49,7 +49,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function PricingRulesIndex({
-    pricingRules,
+    initialPricingRules,
 }: PricingRulesPageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -143,7 +143,7 @@ export default function PricingRulesIndex({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {pricingRules.map((rule) => (
+                                    {initialPricingRules.map((rule) => (
                                         <tr key={rule.id}>
                                             <td className="py-3 font-medium">
                                                 {rule.pricing_module?.code}
@@ -170,7 +170,7 @@ export default function PricingRulesIndex({
                                             </td>
                                         </tr>
                                     ))}
-                                    {pricingRules.length === 0 && (
+                                    {initialPricingRules.length === 0 && (
                                         <tr>
                                             <td
                                                 className="py-8 text-center text-muted-foreground"

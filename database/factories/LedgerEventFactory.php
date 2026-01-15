@@ -19,13 +19,14 @@ class LedgerEventFactory extends Factory
      */
     public function definition(): array
     {
-        $tenant = Tenant::factory();
-        $account = Account::factory()->for($tenant);
+        $tenant = Tenant::factory()->create();
+        $account = Account::factory()->for($tenant)->create();
+        $program = Program::factory()->for($tenant)->for($account)->create();
 
         return [
-            'tenant_id' => $tenant,
-            'account_id' => $account,
-            'program_id' => Program::factory()->for($tenant)->for($account),
+            'tenant_id' => $tenant->id,
+            'account_id' => $account->id,
+            'program_id' => $program->id,
             'event_type' => 'ShipmentCreated',
             'external_reference_id' => strtoupper(fake()->unique()->bothify('EVT-######')),
             'metadata' => [

@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -90,8 +90,13 @@ export default function StatementsIndex({ statements }: StatementsPageProps) {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
+                                                    asChild
                                                 >
-                                                    View
+                                                    <Link
+                                                        href={`/statements/${statement.id}`}
+                                                    >
+                                                        View
+                                                    </Link>
                                                 </Button>
                                             </td>
                                         </tr>

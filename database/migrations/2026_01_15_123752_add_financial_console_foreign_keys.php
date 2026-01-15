@@ -35,8 +35,8 @@ return new class extends Migration
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
             $table->foreign('account_id')->references('id')->on('accounts')->nullOnDelete();
             $table->foreign('ledger_event_id')->references('id')->on('ledger_events')->cascadeOnDelete();
-            $table->foreign('pricing_rule_id')->references('id')->on('pricing_rules')->cascadeOnDelete();
-            $table->foreign('pricing_module_id')->references('id')->on('pricing_modules')->cascadeOnDelete();
+            $table->foreign('pricing_rule_id')->references('id')->on('pricing_rules')->nullOnDelete();
+            $table->foreign('pricing_module_id')->references('id')->on('pricing_modules')->nullOnDelete();
         });
 
         Schema::table('billing_statements', function (Blueprint $table): void {

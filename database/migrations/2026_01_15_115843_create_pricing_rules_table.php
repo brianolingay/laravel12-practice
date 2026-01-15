@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->string('currency', 3)->default('USD');
             $table->string('event_type')->nullable();
-            $table->jsonb('tier_definition')->nullable();
+            $table->json('tier_definition')->nullable();
             $table->date('effective_from');
             $table->date('effective_to')->nullable();
             $table->timestamps();

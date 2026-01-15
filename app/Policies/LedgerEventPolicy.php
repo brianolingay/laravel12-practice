@@ -29,7 +29,7 @@ class LedgerEventPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermission('view_ledger');
+        return $user->hasPermission('create_ledger');
     }
 
     /**

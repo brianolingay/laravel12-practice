@@ -38,7 +38,7 @@ test('statement generation creates expected line items', function () {
     $statement->load('lineItems');
 
     expect($statement->lineItems)->toHaveCount(1);
-    expect($statement->lineItems->first()->total_amount)->toBe(2);
+    expect($statement->lineItems->first()->total_amount)->toEqual('2.00');
 });
 
 test('statement status transitions are enforced', function () {

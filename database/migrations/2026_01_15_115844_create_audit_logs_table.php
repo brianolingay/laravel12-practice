@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('account_id')->nullable();
             $table->foreignId('actor_id')->nullable();
             $table->string('action');
-            $table->jsonb('metadata')->default('{}');
+            $table->json('metadata')->default('{}');
             $table->timestamps();
 
             $table->index(['tenant_id', 'account_id', 'created_at']);

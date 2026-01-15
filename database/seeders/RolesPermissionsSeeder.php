@@ -15,6 +15,7 @@ class RolesPermissionsSeeder extends Seeder
     {
         $permissions = [
             'view_ledger',
+            'create_ledger',
             'manage_pricing',
             'generate_statements',
             'approve_statements',
@@ -28,7 +29,7 @@ class RolesPermissionsSeeder extends Seeder
         $roles = [
             'super_admin' => $permissions,
             'tenant_admin' => $permissions,
-            'account_admin' => ['view_ledger', 'generate_statements', 'export_financials'],
+            'account_admin' => ['view_ledger', 'create_ledger', 'generate_statements', 'export_financials'],
             'finance_viewer' => ['view_ledger', 'export_financials'],
         ];
 

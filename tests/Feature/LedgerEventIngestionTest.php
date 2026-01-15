@@ -10,7 +10,7 @@ use Laravel\Sanctum\Sanctum;
 
 function createLedgerUser(Tenant $tenant, ?Account $account = null): User
 {
-    $permission = Permission::factory()->create(['name' => 'view_ledger']);
+    $permission = Permission::factory()->create(['name' => 'create_ledger']);
     $role = Role::factory()->create(['name' => 'ledger_user']);
     $role->permissions()->sync([$permission->id]);
 

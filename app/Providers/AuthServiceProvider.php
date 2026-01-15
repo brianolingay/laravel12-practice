@@ -31,8 +31,8 @@ class AuthServiceProvider extends ServiceProvider
         Gate::policy(PricingRule::class, PricingRulePolicy::class);
         Gate::policy(BillingStatement::class, BillingStatementPolicy::class);
 
-        Gate::before(function (User $user): ?bool {
-            return $user->isSuperAdmin() ? true : null;
+        Gate::before(function (?User $user): ?bool {
+            return $user?->isSuperAdmin() ? true : null;
         });
     }
 }

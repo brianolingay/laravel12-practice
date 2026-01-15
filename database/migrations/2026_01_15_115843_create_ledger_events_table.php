@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('program_id')->nullable();
             $table->string('event_type');
             $table->string('external_reference_id');
-            $table->jsonb('metadata')->default('{}');
+            $table->json('metadata')->default('{}');
             $table->timestampTz('occurred_at');
             $table->timestamps();
 

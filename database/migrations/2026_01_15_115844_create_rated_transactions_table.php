@@ -16,8 +16,8 @@ return new class extends Migration
             $table->foreignId('tenant_id');
             $table->foreignId('account_id')->nullable();
             $table->foreignId('ledger_event_id');
-            $table->foreignId('pricing_rule_id');
-            $table->foreignId('pricing_module_id');
+            $table->foreignId('pricing_rule_id')->nullable();
+            $table->foreignId('pricing_module_id')->nullable();
             $table->string('event_type')->nullable();
             $table->decimal('amount', 12, 2);
             $table->string('currency', 3)->default('USD');
