@@ -1,5 +1,5 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Head, Link } from '@inertiajs/react';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -17,6 +17,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { useInertiaResource } from '@/hooks/use-inertia-resource';
 import { getPricingModules } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
 import pricing from '@/routes/pricing';
@@ -57,49 +58,30 @@ const normalizeModule = (module: PricingModuleRecord): PricingModule & {
 export default function PricingIndex({
     pricingModules = [],
 }: PricingIndexProps) {
-    const [modules, setModules] = useState<
-        Array<PricingModule & { rules_count?: number }>
-    >(USE_MOCKS ? [] : pricingModules.map(normalizeModule));
-    const [isLoading, setIsLoading] = useState(USE_MOCKS);
-    const [hasError, setHasError] = useState(false);
+    const normalizedModules = useMemo(
+        () => pricingModules.map(normalizeModule),
+        [pricingModules],
+    );
 
-    const fetchModules = async () => {
-        setHasError(false);
-        if (!USE_MOCKS) {
-            setIsLoading(true);
-            router.reload({ only: ['pricingModules'] });
-            return;
-        }
-
-        setIsLoading(true);
-        try {
+    const {
+        data: modules,
+        isLoading,
+        hasError,
+        refresh: fetchModules,
+    } = useInertiaResource<Array<PricingModule & { rules_count?: number }>>({
+        initialData: normalizedModules,
+        mockData: [],
+        useMocks: USE_MOCKS,
+        reloadOnly: ['pricingModules'],
+        fetcher: async () => {
             const response = await getPricingModules();
-            setModules(
-                response.map((module) => ({
-                    ...module,
-                    rules_count: 0,
-                })),
-            );
-        } catch {
-            setHasError(true);
-            toast.error('Unable to load pricing modules');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (USE_MOCKS) {
-            fetchModules();
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!USE_MOCKS) {
-            setModules(pricingModules.map(normalizeModule));
-            setIsLoading(false);
-        }
-    }, [pricingModules]);
+            return response.map((module) => ({
+                ...module,
+                rules_count: 0,
+            }));
+        },
+        onError: () => toast.error('Unable to load pricing modules'),
+    });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

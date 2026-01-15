@@ -82,6 +82,20 @@ class User extends Authenticatable
         })->exists();
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public function permissionNames(): array
+    {
+        return $this->roles()
+            ->with('permissions')
+            ->get()
+            ->flatMap(fn (Role $role) => $role->permissions->pluck('name'))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('super_admin');

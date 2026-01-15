@@ -1,5 +1,5 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Head, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -28,6 +28,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { useInertiaResource } from '@/hooks/use-inertia-resource';
 import {
     finalizeStatement,
     generateStatement,
@@ -75,49 +76,30 @@ const normalizeStatement = (statement: StatementRecord): StatementSummary => ({
 export default function StatementsIndex({
     statements: serverStatements = [],
 }: StatementsProps) {
-    const [statementsList, setStatementsList] = useState<StatementSummary[]>(
-        USE_MOCKS ? [] : serverStatements.map(normalizeStatement),
+    const normalizedStatements = useMemo(
+        () => serverStatements.map(normalizeStatement),
+        [serverStatements],
     );
-    const [isLoading, setIsLoading] = useState(USE_MOCKS);
-    const [hasError, setHasError] = useState(false);
+
+    const {
+        data: statementsList,
+        setData: setStatementsList,
+        isLoading,
+        hasError,
+        refresh: fetchStatements,
+    } = useInertiaResource<StatementSummary[]>({
+        initialData: normalizedStatements,
+        mockData: [],
+        useMocks: USE_MOCKS,
+        reloadOnly: ['statements'],
+        fetcher: getStatements,
+        onError: () => toast.error('Unable to load statements'),
+    });
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [period, setPeriod] = useState({
         start: '',
         end: '',
     });
-
-    const fetchStatements = async () => {
-        setHasError(false);
-        if (!USE_MOCKS) {
-            setIsLoading(true);
-            router.reload({ only: ['statements'] });
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const response = await getStatements();
-            setStatementsList(response);
-        } catch {
-            setHasError(true);
-            toast.error('Unable to load statements');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (USE_MOCKS) {
-            fetchStatements();
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!USE_MOCKS) {
-            setStatementsList(serverStatements.map(normalizeStatement));
-            setIsLoading(false);
-        }
-    }, [serverStatements]);
 
     const handleGenerate = async () => {
         if (!period.start || !period.end) {

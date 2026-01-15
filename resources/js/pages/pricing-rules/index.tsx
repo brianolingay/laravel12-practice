@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, useRemember } from '@inertiajs/react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -41,6 +41,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { useInertiaResource } from '@/hooks/use-inertia-resource';
 import { getPricingModules, getPricingRules } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
 import pricingRules from '@/routes/pricing-rules';
@@ -128,18 +129,51 @@ const normalizeRule = (rule: PricingRuleRecord): PricingRule => ({
     module_id: rule.pricing_module_id ?? rule.pricing_module?.id ?? 0,
 });
 
+interface PricingRulesState {
+    modules: PricingModule[];
+    rules: PricingRule[];
+}
+
 export default function PricingRulesIndex({
     initialPricingRules = [],
     pricingModules = [],
 }: PricingRulesProps) {
-    const [modules, setModules] = useState<PricingModule[]>(
-        USE_MOCKS ? [] : pricingModules.map(normalizeModule),
-    );
-    const [rules, setRules] = useState<PricingRule[]>(
-        USE_MOCKS ? [] : initialPricingRules.map(normalizeRule),
-    );
-    const [isLoading, setIsLoading] = useState(USE_MOCKS);
-    const [hasError, setHasError] = useState(false);
+    const normalizedState = useMemo<PricingRulesState>(() => {
+        return {
+            modules: pricingModules.map(normalizeModule),
+            rules: initialPricingRules.map(normalizeRule),
+        };
+    }, [initialPricingRules, pricingModules]);
+
+    const {
+        data: pricingState,
+        setData: setPricingState,
+        isLoading,
+        hasError,
+        refresh: fetchRules,
+    } = useInertiaResource<PricingRulesState>({
+        initialData: normalizedState,
+        mockData: { modules: [], rules: [] },
+        useMocks: USE_MOCKS,
+        reloadOnly: ['initialPricingRules', 'pricingModules'],
+        fetcher: async () => {
+            const [moduleResponse, ruleResponse] = await Promise.all([
+                getPricingModules(),
+                getPricingRules(),
+            ]);
+
+            return {
+                modules: moduleResponse,
+                rules: ruleResponse,
+            };
+        },
+        onError: () => toast.error('Unable to load pricing rules'),
+    });
+
+    const { modules, rules } = pricingState;
+    const [filtersByModule, setFiltersByModule] = useRemember<
+        Record<number, { query: string; status: string }>
+    >({}, 'PricingRules/Filters');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
         module_id: '',
@@ -150,8 +184,9 @@ export default function PricingRulesIndex({
         event_type: '',
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-    const [expandedRuleIds, setExpandedRuleIds] = useState<Set<number>>(
-        new Set(),
+    const [expandedRuleIds, setExpandedRuleIds] = useRemember<number[]>(
+        [],
+        'PricingRules/Expanded',
     );
 
     const activeModuleId = modules[0]?.id ?? null;
@@ -164,44 +199,6 @@ export default function PricingRulesIndex({
             return acc;
         }, {});
     }, [modules, rules]);
-
-    const fetchRules = async () => {
-        setHasError(false);
-        if (!USE_MOCKS) {
-            setIsLoading(true);
-            router.reload({ only: ['initialPricingRules', 'pricingModules'] });
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const [moduleResponse, ruleResponse] = await Promise.all([
-                getPricingModules(),
-                getPricingRules(),
-            ]);
-            setModules(moduleResponse);
-            setRules(ruleResponse);
-        } catch {
-            setHasError(true);
-            toast.error('Unable to load pricing rules');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (USE_MOCKS) {
-            fetchRules();
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!USE_MOCKS) {
-            setModules(pricingModules.map(normalizeModule));
-            setRules(initialPricingRules.map(normalizeRule));
-            setIsLoading(false);
-        }
-    }, [pricingModules, initialPricingRules]);
 
     useEffect(() => {
         if (isDialogOpen && activeModuleId && !formData.module_id) {
@@ -250,7 +247,10 @@ export default function PricingRulesIndex({
                 status: 'active',
                 module_id: Number(formData.module_id),
             };
-            setRules((prev) => [newRule, ...prev]);
+            setPricingState((prev) => ({
+                ...prev,
+                rules: [newRule, ...prev.rules],
+            }));
             toast.success('Pricing rule created.');
             setIsDialogOpen(false);
             setFormData({
@@ -270,11 +270,14 @@ export default function PricingRulesIndex({
 
     const handleDeactivate = (ruleId: number) => {
         if (USE_MOCKS) {
-            setRules((prev) =>
-                prev.map((rule) =>
-                    rule.id === ruleId ? { ...rule, status: 'inactive' } : rule,
+            setPricingState((prev) => ({
+                ...prev,
+                rules: prev.rules.map((rule) =>
+                    rule.id === ruleId
+                        ? { ...rule, status: 'inactive' }
+                        : rule,
                 ),
-            );
+            }));
             toast.success('Rule deactivated.');
             return;
         }
@@ -282,16 +285,17 @@ export default function PricingRulesIndex({
         toast.message('Deactivate request sent.');
     };
 
+    const expandedRuleSet = useMemo(
+        () => new Set(expandedRuleIds),
+        [expandedRuleIds],
+    );
+
     const toggleRuleDetails = (ruleId: number) => {
-        setExpandedRuleIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(ruleId)) {
-                next.delete(ruleId);
-                return next;
-            }
-            next.add(ruleId);
-            return next;
-        });
+        setExpandedRuleIds((prev) =>
+            prev.includes(ruleId)
+                ? prev.filter((id) => id !== ruleId)
+                : [...prev, ruleId],
+        );
     };
 
     return (
@@ -540,6 +544,30 @@ export default function PricingRulesIndex({
                             const perEventRules = moduleRules.filter(
                                 (rule) => rule.rule_type === 'per_event',
                             ).length;
+                            const moduleFilters =
+                                filtersByModule[module.id] ?? {
+                                    query: '',
+                                    status: 'all',
+                                };
+                            const filteredModuleRules = moduleRules.filter(
+                                (rule) => {
+                                    const matchesStatus =
+                                        moduleFilters.status === 'all' ||
+                                        rule.status === moduleFilters.status;
+                                    const query = moduleFilters.query
+                                        .trim()
+                                        .toLowerCase();
+                                    const matchesQuery = query
+                                        ? `${rule.rule_type} ${
+                                              rule.event_type ?? ''
+                                          }`
+                                              .toLowerCase()
+                                              .includes(query)
+                                        : true;
+
+                                    return matchesStatus && matchesQuery;
+                                },
+                            );
 
                             return (
                                 <div
@@ -599,6 +627,33 @@ export default function PricingRulesIndex({
                                                     </label>
                                                     <Input
                                                         placeholder="Search by type"
+                                                        value={
+                                                            moduleFilters.query
+                                                        }
+                                                        onChange={(event) =>
+                                                            setFiltersByModule(
+                                                                (prev) => {
+                                                                    const current =
+                                                                        prev[
+                                                                            module.id
+                                                                        ] ?? {
+                                                                            query: '',
+                                                                            status: 'all',
+                                                                        };
+
+                                                                    return {
+                                                                        ...prev,
+                                                                        [module.id]:
+                                                                            {
+                                                                                ...current,
+                                                                                query: event
+                                                                                    .target
+                                                                                    .value,
+                                                                            },
+                                                                    };
+                                                                },
+                                                            )
+                                                        }
                                                         className="h-10 bg-background/70"
                                                     />
                                                 </div>
@@ -606,7 +661,35 @@ export default function PricingRulesIndex({
                                                     <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                                         Status
                                                     </label>
-                                                    <Select defaultValue="all">
+                                                    <Select
+                                                        value={
+                                                            moduleFilters.status
+                                                        }
+                                                        onValueChange={(
+                                                            value,
+                                                        ) =>
+                                                            setFiltersByModule(
+                                                                (prev) => {
+                                                                    const current =
+                                                                        prev[
+                                                                            module.id
+                                                                        ] ?? {
+                                                                            query: '',
+                                                                            status: 'all',
+                                                                        };
+
+                                                                    return {
+                                                                        ...prev,
+                                                                        [module.id]:
+                                                                            {
+                                                                                ...current,
+                                                                                status: value,
+                                                                            },
+                                                                    };
+                                                                },
+                                                            )
+                                                        }
+                                                    >
                                                         <SelectTrigger className="h-10 bg-background/70">
                                                             <SelectValue placeholder="All statuses" />
                                                         </SelectTrigger>
@@ -628,7 +711,8 @@ export default function PricingRulesIndex({
                                         pagination={
                                             <>
                                                 <span className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                                                    {moduleRules.length} rules
+                                                    {filteredModuleRules.length}{' '}
+                                                    rules
                                                 </span>
                                                 <div className="flex gap-2">
                                                     <Button
@@ -651,7 +735,7 @@ export default function PricingRulesIndex({
                                             </>
                                         }
                                     >
-                                        {moduleRules.length ? (
+                                        {filteredModuleRules.length ? (
                                             <Table className="text-sm">
                                                 <TableHeader>
                                                     <TableRow className="border-border/60">
@@ -673,13 +757,14 @@ export default function PricingRulesIndex({
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {moduleRules.map((rule) => {
-                                                        const isExpanded =
-                                                            expandedRuleIds.has(
-                                                                rule.id,
-                                                            );
+                                                {filteredModuleRules.map(
+                                                    (rule) => {
+                                                    const isExpanded =
+                                                        expandedRuleSet.has(
+                                                            rule.id,
+                                                        );
 
-                                                        return (
+                                                    return (
                                                             <Fragment
                                                                 key={rule.id}
                                                             >
@@ -850,24 +935,33 @@ export default function PricingRulesIndex({
                                                                 )}
                                                             </Fragment>
                                                         );
-                                                    })}
-                                                </TableBody>
-                                            </Table>
-                                        ) : (
-                                            <EmptyState
-                                                icon={
-                                                    <span className="text-lg">
-                                                        🧾
-                                                    </span>
-                                                }
-                                                title="No rules configured"
-                                                description="Create a pricing rule for this module."
-                                                actionLabel="Create rule"
-                                                onAction={() =>
-                                                    setIsDialogOpen(true)
-                                                }
-                                            />
-                                        )}
+                                                },
+                                            )}
+                                            </TableBody>
+                                        </Table>
+                                    ) : (
+                                        <EmptyState
+                                            icon={
+                                                <span className="text-lg">
+                                                    🧾
+                                                </span>
+                                            }
+                                            title={
+                                                moduleRules.length === 0
+                                                    ? 'No rules configured'
+                                                    : 'No matching rules'
+                                            }
+                                            description={
+                                                moduleRules.length === 0
+                                                    ? 'Create a pricing rule for this module.'
+                                                    : 'Try adjusting your filters to see more results.'
+                                            }
+                                            actionLabel="Create rule"
+                                            onAction={() =>
+                                                setIsDialogOpen(true)
+                                            }
+                                        />
+                                    )}
                                     </DataTable>
                                 </div>
                             );

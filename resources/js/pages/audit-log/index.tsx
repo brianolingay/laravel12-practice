@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Head, useRemember } from '@inertiajs/react';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -26,6 +26,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { useInertiaResource } from '@/hooks/use-inertia-resource';
 import { getAuditLogs } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
 import auditLog from '@/routes/audit-log';
@@ -60,44 +61,46 @@ const normalizeLog = (log: AuditLogRecord): AuditLogEntry => ({
 });
 
 export default function AuditLogIndex({ auditLogs = [] }: AuditLogProps) {
-    const [logs, setLogs] = useState<AuditLogEntry[]>(
-        USE_MOCKS ? [] : auditLogs.map(normalizeLog),
+    const normalizedLogs = useMemo(
+        () => auditLogs.map(normalizeLog),
+        [auditLogs],
     );
-    const [isLoading, setIsLoading] = useState(USE_MOCKS);
-    const [hasError, setHasError] = useState(false);
 
-    const fetchLogs = async () => {
-        setHasError(false);
-        if (!USE_MOCKS) {
-            setIsLoading(true);
-            router.reload({ only: ['auditLogs'] });
-            return;
-        }
+    const {
+        data: logs,
+        isLoading,
+        hasError,
+        refresh: fetchLogs,
+    } = useInertiaResource<AuditLogEntry[]>({
+        initialData: normalizedLogs,
+        mockData: [],
+        useMocks: USE_MOCKS,
+        reloadOnly: ['auditLogs'],
+        fetcher: getAuditLogs,
+        onError: () => toast.error('Unable to load audit logs'),
+    });
 
-        setIsLoading(true);
-        try {
-            const response = await getAuditLogs();
-            setLogs(response);
-        } catch {
-            setHasError(true);
-            toast.error('Unable to load audit logs');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const [filters, setFilters] = useRemember(
+        { actor: '', action: 'all' },
+        'AuditLog/Filters',
+    );
 
-    useEffect(() => {
-        if (USE_MOCKS) {
-            fetchLogs();
-        }
-    }, []);
+    const filteredLogs = useMemo(() => {
+        const actorQuery = filters.actor.trim().toLowerCase();
+        const actionFilter = filters.action.toLowerCase();
 
-    useEffect(() => {
-        if (!USE_MOCKS) {
-            setLogs(auditLogs.map(normalizeLog));
-            setIsLoading(false);
-        }
-    }, [auditLogs]);
+        return logs.filter((log) => {
+            const matchesActor = actorQuery
+                ? log.actor.toLowerCase().includes(actorQuery)
+                : true;
+            const matchesAction =
+                actionFilter === 'all'
+                    ? true
+                    : log.action.toLowerCase().includes(actionFilter);
+
+            return matchesActor && matchesAction;
+        });
+    }, [filters.action, filters.actor, logs]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -117,11 +120,19 @@ export default function AuditLogIndex({ auditLogs = [] }: AuditLogProps) {
                     <Skeleton className="h-96" />
                 ) : hasError ? (
                     <ErrorState onRetry={fetchLogs} />
-                ) : logs.length === 0 ? (
+                ) : filteredLogs.length === 0 ? (
                     <EmptyState
                         icon={<span className="text-lg">📜</span>}
-                        title="No audit activity"
-                        description="Audit events will appear here once actions are taken."
+                        title={
+                            logs.length === 0
+                                ? 'No audit activity'
+                                : 'No matching audit activity'
+                        }
+                        description={
+                            logs.length === 0
+                                ? 'Audit events will appear here once actions are taken.'
+                                : 'Try adjusting your filters to see more results.'
+                        }
                         actionLabel="Refresh"
                         onAction={fetchLogs}
                     />
@@ -135,13 +146,30 @@ export default function AuditLogIndex({ auditLogs = [] }: AuditLogProps) {
                                     <label className="text-sm font-medium">
                                         Actor
                                     </label>
-                                    <Input placeholder="Search by user" />
+                                    <Input
+                                        value={filters.actor}
+                                        onChange={(event) =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                actor: event.target.value,
+                                            }))
+                                        }
+                                        placeholder="Search by user"
+                                    />
                                 </div>
                                 <div className="flex flex-1 flex-col gap-2">
                                     <label className="text-sm font-medium">
                                         Action type
                                     </label>
-                                    <Select defaultValue="all">
+                                    <Select
+                                        value={filters.action}
+                                        onValueChange={(value) =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                action: value,
+                                            }))
+                                        }
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="All actions" />
                                         </SelectTrigger>
@@ -171,7 +199,7 @@ export default function AuditLogIndex({ auditLogs = [] }: AuditLogProps) {
                         }
                         pagination={
                             <>
-                                <span>{logs.length} entries</span>
+                                <span>{filteredLogs.length} entries</span>
                                 <div className="flex gap-2">
                                     <Button
                                         size="sm"
@@ -201,7 +229,7 @@ export default function AuditLogIndex({ auditLogs = [] }: AuditLogProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {logs.map((log) => (
+                                {filteredLogs.map((log) => (
                                     <TableRow key={log.id}>
                                         <TableCell className="font-medium">
                                             {log.actor}
