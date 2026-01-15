@@ -52,12 +52,6 @@ return new class extends Migration
             $table->foreign('pricing_rule_id')->references('id')->on('pricing_rules')->nullOnDelete();
             $table->foreign('pricing_module_id')->references('id')->on('pricing_modules')->nullOnDelete();
         });
-
-        Schema::table('audit_logs', function (Blueprint $table): void {
-            $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-            $table->foreign('account_id')->references('id')->on('accounts')->nullOnDelete();
-            $table->foreign('actor_id')->references('id')->on('users')->nullOnDelete();
-        });
     }
 
     /**
@@ -65,12 +59,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table): void {
-            $table->dropForeign(['tenant_id']);
-            $table->dropForeign(['account_id']);
-            $table->dropForeign(['actor_id']);
-        });
-
         Schema::table('billing_line_items', function (Blueprint $table): void {
             $table->dropForeign(['billing_statement_id']);
             $table->dropForeign(['pricing_rule_id']);

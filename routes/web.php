@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\PricingRuleController;
 use App\Models\AuditLog;
 use App\Models\BillingStatement;
 use App\Models\LedgerEvent;
+use App\Models\PricingModule;
 use App\Models\PricingRule;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -55,8 +57,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->forTenant($user->tenant_id)
                 ->orderBy('pricing_module_id')
                 ->get(),
+            'pricingModules' => PricingModule::query()
+                ->orderBy('code')
+                ->get(['id', 'code', 'name']),
         ]);
     })->name('pricing-rules.index');
+
+    Route::post('pricing-rules', [PricingRuleController::class, 'store'])->name('pricing-rules.store');
+
+    Route::get('pricing-rules/{pricingRule}/edit', function (PricingRule $pricingRule) {
+        Gate::authorize('view', $pricingRule);
+
+        return Inertia::render('pricing-rules/edit', [
+            'pricingRule' => $pricingRule->load('pricingModule'),
+            'pricingModules' => PricingModule::query()
+                ->orderBy('code')
+                ->get(['id', 'code', 'name']),
+        ]);
+    })->name('pricing-rules.edit');
 
     Route::get('statements', function () {
         Gate::authorize('viewAny', BillingStatement::class);
@@ -84,7 +102,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('statements.show');
 
     Route::get('audit-log', function () {
-        Gate::authorize('viewAny', LedgerEvent::class);
+        Gate::authorize('viewAny', AuditLog::class);
 
         $user = request()->user();
 

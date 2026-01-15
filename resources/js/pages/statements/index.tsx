@@ -35,7 +35,9 @@ const statusTone: Record<string, string> = {
         'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200',
 };
 
-export default function StatementsIndex({ statements }: StatementsPageProps) {
+export default function StatementsIndex({
+    statements: statementItems,
+}: StatementsPageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Statements" />
@@ -64,7 +66,7 @@ export default function StatementsIndex({ statements }: StatementsPageProps) {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {statements.map((statement) => (
+                                    {statementItems.map((statement) => (
                                         <tr key={statement.id}>
                                             <td className="py-3 font-medium">
                                                 {statement.period_start} –{' '}
@@ -93,7 +95,11 @@ export default function StatementsIndex({ statements }: StatementsPageProps) {
                                                     asChild
                                                 >
                                                     <Link
-                                                        href={`/statements/${statement.id}`}
+                                                        href={
+                                                            statements.show(
+                                                                statement.id,
+                                                            ).url
+                                                        }
                                                     >
                                                         View
                                                     </Link>
@@ -101,7 +107,7 @@ export default function StatementsIndex({ statements }: StatementsPageProps) {
                                             </td>
                                         </tr>
                                     ))}
-                                    {statements.length === 0 && (
+                                    {statementItems.length === 0 && (
                                         <tr>
                                             <td
                                                 className="py-8 text-center text-muted-foreground"

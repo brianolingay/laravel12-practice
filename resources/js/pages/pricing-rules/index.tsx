@@ -1,4 +1,5 @@
-import { Head } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +40,21 @@ interface PricingRuleItem {
 
 interface PricingRulesPageProps {
     initialPricingRules: PricingRuleItem[];
+    pricingModules: PricingModuleInfo[];
 }
+
+const eventTypes = [
+    'OrderPlaced',
+    'KitAssigned',
+    'ShipmentCreated',
+    'LabelPurchased',
+    'SpecimenReceived',
+    'ResultFinalized',
+    'ResultDelivered',
+    'PortalUserAdded',
+    'ModuleEnabled',
+    'TelehealthReferralCreated',
+];
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -50,7 +65,24 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function PricingRulesIndex({
     initialPricingRules,
+    pricingModules,
 }: PricingRulesPageProps) {
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const { data, setData, post, processing, reset } = useForm({
+        pricing_module_id: '',
+        rule_type: '',
+        amount: '',
+        event_type: '',
+    });
+
+    const handleCreate = () => {
+        post(pricingRules.store().url, {
+            onSuccess: () => {
+                reset();
+                setIsCreateOpen(false);
+            },
+        });
+    };
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Pricing Rules" />
@@ -58,7 +90,10 @@ export default function PricingRulesIndex({
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Pricing Rules</CardTitle>
-                        <Dialog>
+                        <Dialog
+                            open={isCreateOpen}
+                            onOpenChange={setIsCreateOpen}
+                        >
                             <DialogTrigger asChild>
                                 <Button>Create rule</Button>
                             </DialogTrigger>
@@ -76,14 +111,31 @@ export default function PricingRulesIndex({
                                         <label className="text-sm font-medium">
                                             Module
                                         </label>
-                                        <Select>
+                                        <Select
+                                            value={data.pricing_module_id}
+                                            onValueChange={(value) =>
+                                                setData(
+                                                    'pricing_module_id',
+                                                    value,
+                                                )
+                                            }
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select module" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="core">
-                                                    CORE_PLATFORM
-                                                </SelectItem>
+                                                {pricingModules.map(
+                                                    (module) => (
+                                                        <SelectItem
+                                                            key={module.id}
+                                                            value={String(
+                                                                module.id,
+                                                            )}
+                                                        >
+                                                            {module.code}
+                                                        </SelectItem>
+                                                    ),
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -91,7 +143,12 @@ export default function PricingRulesIndex({
                                         <label className="text-sm font-medium">
                                             Rule type
                                         </label>
-                                        <Select>
+                                        <Select
+                                            value={data.rule_type}
+                                            onValueChange={(value) =>
+                                                setData('rule_type', value)
+                                            }
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select rule type" />
                                             </SelectTrigger>
@@ -107,12 +164,50 @@ export default function PricingRulesIndex({
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">
+                                            Event type
+                                        </label>
+                                        <Select
+                                            value={data.event_type}
+                                            onValueChange={(value) =>
+                                                setData('event_type', value)
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select event type" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {eventTypes.map((eventType) => (
+                                                    <SelectItem
+                                                        key={eventType}
+                                                        value={eventType}
+                                                    >
+                                                        {eventType}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">
                                             Amount
                                         </label>
-                                        <Input placeholder="$0.00" />
+                                        <Input
+                                            placeholder="$0.00"
+                                            value={data.amount}
+                                            onChange={(event) =>
+                                                setData(
+                                                    'amount',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
                                     </div>
                                     <div className="flex justify-end">
-                                        <Button variant="secondary">
+                                        <Button
+                                            variant="secondary"
+                                            onClick={handleCreate}
+                                            disabled={processing}
+                                        >
                                             Save draft
                                         </Button>
                                     </div>
@@ -149,7 +244,7 @@ export default function PricingRulesIndex({
                                                 {rule.pricing_module?.code}
                                             </td>
                                             <td className="py-3 capitalize">
-                                                {rule.rule_type.replace(
+                                                {rule.rule_type.replaceAll(
                                                     '_',
                                                     ' ',
                                                 )}
@@ -164,6 +259,13 @@ export default function PricingRulesIndex({
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
+                                                    onClick={() =>
+                                                        router.visit(
+                                                            pricingRules.edit(
+                                                                rule.id,
+                                                            ).url,
+                                                        )
+                                                    }
                                                 >
                                                     Edit
                                                 </Button>

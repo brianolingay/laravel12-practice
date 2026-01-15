@@ -40,7 +40,7 @@ export default function StatementShow({
         },
         {
             title: `Statement ${statement.id}`,
-            href: `/statements/${statement.id}`,
+            href: statements.show(statement.id).url,
         },
     ];
 
