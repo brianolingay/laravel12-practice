@@ -65,3 +65,19 @@ test('statement status transitions are enforced', function () {
 
     expect($statement->refresh()->status)->toBe(BillingStatementStatus::Finalized);
 });
+
+test('statement generation smoke creates a draft statement', function () {
+    $tenant = Tenant::factory()->create();
+    $account = Account::factory()->for($tenant)->create();
+
+    $generator = app(StatementGenerator::class);
+    $periodStart = CarbonImmutable::now()->startOfMonth();
+    $periodEnd = CarbonImmutable::now()->endOfMonth();
+
+    $statement = $generator->generate($tenant->id, $account->id, $periodStart, $periodEnd);
+
+    $statement->load('lineItems');
+
+    expect($statement->status)->toBe(BillingStatementStatus::Draft);
+    expect($statement->lineItems)->toHaveCount(0);
+});

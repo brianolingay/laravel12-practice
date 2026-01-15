@@ -84,9 +84,14 @@ test('returns existing event on idempotent ingestion', function () {
         ->assertCreated()
         ->json();
 
+    $event = LedgerEvent::query()->firstOrFail();
+    $firstUpdatedAt = $event->updated_at;
+
     $secondResponse = $this->postJson(route('ledger-events.store'), $payload)
         ->assertOk()
         ->json();
 
     expect($secondResponse['id'])->toBe($firstResponse['id']);
+    expect(LedgerEvent::query()->count())->toBe(1);
+    expect($event->refresh()->updated_at)->toEqual($firstUpdatedAt);
 });
