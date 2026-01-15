@@ -11,6 +11,7 @@ use App\Models\PricingRule;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 function userWithPermissions(array $permissions, Tenant $tenant, ?Account $account = null): User
 {
@@ -51,7 +52,14 @@ test('authorized users can view financial console pages', function () {
 
     $this->get(route('dashboard'))->assertOk();
     $this->get(route('ledger.index'))->assertOk();
-    $this->get(route('pricing-rules.index'))->assertOk();
+    $this->get(route('pricing.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('pricing/index')
+        );
+    $this->get(route('pricing.show', $pricingModule))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('pricing/show')
+        );
     $this->get(route('statements.index'))->assertOk();
     $this->get(route('audit-log.index'))->assertOk();
     $this->get(route('statements.show', $statement))->assertOk();

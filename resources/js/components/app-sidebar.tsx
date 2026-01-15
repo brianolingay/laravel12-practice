@@ -24,7 +24,7 @@ import {
 import { dashboard } from '@/routes';
 import auditLog from '@/routes/audit-log';
 import ledger from '@/routes/ledger';
-import pricingRules from '@/routes/pricing-rules';
+import pricing from '@/routes/pricing';
 import statements from '@/routes/statements';
 import { type NavItem } from '@/types';
 
@@ -43,7 +43,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Pricing',
-        href: pricingRules.index(),
+        href: pricing.index(),
         icon: Tag,
     },
     {

@@ -46,6 +46,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('ledger.index');
 
+    Route::get('pricing', function () {
+        Gate::authorize('viewAny', PricingRule::class);
+
+        $user = request()->user();
+
+        return Inertia::render('pricing/index', [
+            'pricingModules' => PricingModule::query()
+                ->withCount([
+                    'pricingRules as rules_count' => fn ($query) => $query->forTenant($user->tenant_id),
+                ])
+                ->orderBy('code')
+                ->get(['id', 'code', 'name', 'description']),
+        ]);
+    })->name('pricing.index');
+
+    Route::get('pricing/{pricingModule}', function (PricingModule $pricingModule) {
+        Gate::authorize('viewAny', PricingRule::class);
+
+        $user = request()->user();
+
+        return Inertia::render('pricing/show', [
+            'pricingModuleId' => $pricingModule->id,
+            'pricingModule' => $pricingModule->only(['id', 'code', 'name', 'description']),
+            'pricingRules' => PricingRule::query()
+                ->with('pricingModule')
+                ->forTenant($user->tenant_id)
+                ->where('pricing_module_id', $pricingModule->id)
+                ->latest('effective_from')
+                ->get(),
+        ]);
+    })->name('pricing.show');
+
     Route::get('pricing-rules', function () {
         Gate::authorize('viewAny', PricingRule::class);
 
