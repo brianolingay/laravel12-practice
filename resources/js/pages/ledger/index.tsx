@@ -33,8 +33,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import AppLayout from '@/layouts/app-layout';
 import { useInertiaResource } from '@/hooks/use-inertia-resource';
+import AppLayout from '@/layouts/app-layout';
 import { getLedgerEvents } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
 import ledger from '@/routes/ledger';

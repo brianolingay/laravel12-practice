@@ -27,8 +27,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import AppLayout from '@/layouts/app-layout';
 import { useInertiaResource } from '@/hooks/use-inertia-resource';
+import AppLayout from '@/layouts/app-layout';
 import {
     finalizeStatement,
     generateStatement,

@@ -1,5 +1,5 @@
 import { Head, useRemember } from '@inertiajs/react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -40,8 +40,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import AppLayout from '@/layouts/app-layout';
 import { useInertiaResource } from '@/hooks/use-inertia-resource';
+import AppLayout from '@/layouts/app-layout';
 import { getPricingModules, getPricingRules } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
 import pricingRules from '@/routes/pricing-rules';
@@ -200,14 +200,16 @@ export default function PricingRulesIndex({
         }, {});
     }, [modules, rules]);
 
-    useEffect(() => {
-        if (isDialogOpen && activeModuleId && !formData.module_id) {
+    const handleDialogOpenChange = (open: boolean) => {
+        setIsDialogOpen(open);
+
+        if (open && activeModuleId && !formData.module_id) {
             setFormData((prev) => ({
                 ...prev,
                 module_id: String(activeModuleId),
             }));
         }
-    }, [isDialogOpen, activeModuleId, formData.module_id]);
+    };
 
     const handleCreateRule = () => {
         const errors: Record<string, string> = {};
@@ -314,7 +316,7 @@ export default function PricingRulesIndex({
                     actions={
                         <Dialog
                             open={isDialogOpen}
-                            onOpenChange={setIsDialogOpen}
+                            onOpenChange={handleDialogOpenChange}
                         >
                             <DialogTrigger asChild>
                                 <Button className="shadow-sm">
