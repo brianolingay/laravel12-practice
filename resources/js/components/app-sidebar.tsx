@@ -1,5 +1,13 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import {
+    BookOpen,
+    Folder,
+    LayoutGrid,
+    List,
+    Receipt,
+    ShieldCheck,
+    Tag,
+} from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,6 +22,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import auditLog from '@/routes/audit-log';
+import ledger from '@/routes/ledger';
+import pricingRules from '@/routes/pricing-rules';
+import statements from '@/routes/statements';
 import { type NavItem } from '@/types';
 
 import AppLogo from './app-logo';
@@ -23,6 +35,26 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Ledger Explorer',
+        href: ledger.index(),
+        icon: List,
+    },
+    {
+        title: 'Pricing Rules',
+        href: pricingRules.index(),
+        icon: Tag,
+    },
+    {
+        title: 'Statements',
+        href: statements.index(),
+        icon: Receipt,
+    },
+    {
+        title: 'Audit Log',
+        href: auditLog.index(),
+        icon: ShieldCheck,
     },
 ];
 
