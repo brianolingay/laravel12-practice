@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -163,6 +163,8 @@ export default function StatementsIndex({
                         return { ...statement, status };
                     }),
                 );
+            } else {
+                await fetchStatements();
             }
         } catch {
             toast.error('Unable to update status.');
@@ -318,7 +320,7 @@ export default function StatementsIndex({
                                                     variant="outline"
                                                     asChild
                                                 >
-                                                    <a
+                                                    <Link
                                                         href={
                                                             statements.show(
                                                                 statement.id,
@@ -326,7 +328,7 @@ export default function StatementsIndex({
                                                         }
                                                     >
                                                         View
-                                                    </a>
+                                                    </Link>
                                                 </Button>
                                                 <Button
                                                     size="sm"

@@ -5,6 +5,7 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react"
+import React from "react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
 import { useAppearance } from "@/hooks/use-appearance"

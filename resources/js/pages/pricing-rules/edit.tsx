@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
@@ -50,7 +50,9 @@ export default function PricingRulesEdit({
                     description="Review pricing rule details and current status."
                     actions={
                         <Button variant="outline" asChild>
-                            <a href={pricingRules.index().url}>Back to rules</a>
+                            <Link href={pricingRules.index().url}>
+                                Back to rules
+                            </Link>
                         </Button>
                     }
                 />

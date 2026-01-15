@@ -21,19 +21,39 @@ import {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+    const headers = new Headers(options?.headers);
+    headers.set('Content-Type', 'application/json');
+    headers.set('Accept', 'application/json');
+
+    const xsrfToken = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+
+    if (xsrfToken) {
+        headers.set('X-XSRF-TOKEN', decodeURIComponent(xsrfToken));
+    }
+
     const response = await fetch(url, {
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-        },
         ...options,
+        headers,
     });
 
     if (!response.ok) {
         throw new Error('Request failed');
     }
 
-    return (await response.json()) as T;
+    if (response.status === 204) {
+        return undefined as T;
+    }
+
+    const text = await response.text();
+
+    if (!text) {
+        return undefined as T;
+    }
+
+    return JSON.parse(text) as T;
 }
 
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
