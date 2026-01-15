@@ -11,7 +11,7 @@ import {
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     Sidebar,
     SidebarContent,
@@ -37,12 +37,12 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Ledger Explorer',
+        title: 'Ledger',
         href: ledger.index(),
         icon: List,
     },
     {
-        title: 'Pricing Rules',
+        title: 'Pricing',
         href: pricingRules.index(),
         icon: Tag,
     },
@@ -87,12 +87,13 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <ScrollArea className="h-full px-2">
+                    <NavMain items={mainNavItems} />
+                </ScrollArea>
             </SidebarContent>
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />
-                <NavUser />
             </SidebarFooter>
         </Sidebar>
     );
