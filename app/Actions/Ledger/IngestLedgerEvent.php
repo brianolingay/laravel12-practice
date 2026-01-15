@@ -36,6 +36,7 @@ class IngestLedgerEvent
                     $query->whereNull('account_id');
                 })
                 ->where('external_reference_id', $validated['external_reference_id'])
+                ->lockForUpdate()
                 ->first();
 
             if ($existing) {
