@@ -4,6 +4,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\PricingController;
 use App\Http\Controllers\PricingRuleController;
 use App\Http\Controllers\PricingRulePageController;
 use App\Http\Controllers\StatementController;
@@ -14,6 +15,8 @@ Route::get('/', HomeController::class)->name('home');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
+    Route::get('pricing', [PricingController::class, 'index'])->name('pricing.index');
+    Route::get('pricing/{pricingModule}', [PricingController::class, 'show'])->name('pricing.show');
     Route::get('pricing-rules', [PricingRulePageController::class, 'index'])->name('pricing-rules.index');
     Route::post('pricing-rules', [PricingRuleController::class, 'store'])->name('pricing-rules.store');
     Route::get('pricing-rules/{pricingRule}/edit', [PricingRulePageController::class, 'edit'])->name('pricing-rules.edit');
