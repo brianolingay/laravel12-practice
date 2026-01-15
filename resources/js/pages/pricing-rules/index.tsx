@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -40,7 +40,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { getPricingModules, getPricingRules } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
@@ -151,6 +150,9 @@ export default function PricingRulesIndex({
         event_type: '',
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [expandedRuleIds, setExpandedRuleIds] = useState<Set<number>>(
+        new Set(),
+    );
 
     const activeModuleId = modules[0]?.id ?? null;
 
@@ -280,11 +282,29 @@ export default function PricingRulesIndex({
         toast.message('Deactivate request sent.');
     };
 
+    const toggleRuleDetails = (ruleId: number) => {
+        setExpandedRuleIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(ruleId)) {
+                next.delete(ruleId);
+                return next;
+            }
+            next.add(ruleId);
+            return next;
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Pricing Rules" />
-            <div className="flex flex-1 flex-col gap-6">
+            <div className="relative flex flex-1 flex-col gap-8">
+                <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+                    <div className="absolute -top-24 right-10 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.25),_transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.18),_transparent_70%)]" />
+                    <div className="absolute -bottom-24 left-6 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,_rgba(251,191,36,0.22),_transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,_rgba(251,191,36,0.16),_transparent_70%)]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(135deg,_rgba(0,0,0,0.06),_transparent_55%)] dark:bg-[linear-gradient(135deg,_rgba(255,255,255,0.05),_transparent_55%)]" />
+                </div>
                 <PageHeader
+                    className="border-border/40 pb-6"
                     title="Pricing Rules"
                     description="Configure module pricing rules and effective periods."
                     actions={
@@ -293,7 +313,9 @@ export default function PricingRulesIndex({
                             onOpenChange={setIsDialogOpen}
                         >
                             <DialogTrigger asChild>
-                                <Button>Create rule</Button>
+                                <Button className="shadow-sm">
+                                    Create rule
+                                </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-lg">
                                 <DialogHeader>
@@ -307,7 +329,7 @@ export default function PricingRulesIndex({
                                 </DialogHeader>
                                 <div className="grid gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">
+                                        <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                             Module
                                         </label>
                                         <Select
@@ -342,7 +364,7 @@ export default function PricingRulesIndex({
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">
+                                        <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                             Rule type
                                         </label>
                                         <Select
@@ -381,7 +403,7 @@ export default function PricingRulesIndex({
                                     </div>
                                     {formData.rule_type === 'per_event' && (
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">
+                                            <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                                 Event type
                                             </label>
                                             <Select
@@ -420,7 +442,7 @@ export default function PricingRulesIndex({
                                     )}
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">
+                                            <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                                 Amount
                                             </label>
                                             <Input
@@ -441,7 +463,7 @@ export default function PricingRulesIndex({
                                             )}
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">
+                                            <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                                 Effective from
                                             </label>
                                             <Input
@@ -463,7 +485,7 @@ export default function PricingRulesIndex({
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">
+                                        <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                             Effective to (optional)
                                         </label>
                                         <Input
@@ -508,193 +530,349 @@ export default function PricingRulesIndex({
                         onAction={() => toast.message('Contacting support')}
                     />
                 ) : (
-                    <Tabs defaultValue={String(activeModuleId ?? '')}>
-                        <TabsList className="flex flex-wrap justify-start">
-                            {modules.map((module) => (
-                                <TabsTrigger
+                    <div className="space-y-8">
+                        {modules.map((module) => {
+                            const moduleRules =
+                                groupedRules[module.id] ?? [];
+                            const activeRules = moduleRules.filter(
+                                (rule) => rule.status === 'active',
+                            ).length;
+                            const perEventRules = moduleRules.filter(
+                                (rule) => rule.rule_type === 'per_event',
+                            ).length;
+
+                            return (
+                                <div
                                     key={module.id}
-                                    value={String(module.id)}
+                                    className="rounded-3xl border border-border/60 bg-card/70 p-6 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.6)] backdrop-blur"
                                 >
-                                    {module.code}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                        {modules.map((module) => (
-                            <TabsContent
-                                key={module.id}
-                                value={String(module.id)}
-                            >
-                                <DataTable
-                                    title={module.name}
-                                    description={module.description}
-                                    filters={
-                                        <>
-                                            <div className="flex flex-1 flex-col gap-2">
-                                                <label className="text-sm font-medium">
-                                                    Search rule
-                                                </label>
-                                                <Input placeholder="Search by type" />
+                                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                        <div className="space-y-2">
+                                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                                                Module {module.code}
+                                            </p>
+                                            <div>
+                                                <p className="text-2xl font-semibold tracking-tight">
+                                                    {module.name}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {module.description}
+                                                </p>
                                             </div>
-                                            <div className="flex flex-1 flex-col gap-2">
-                                                <label className="text-sm font-medium">
-                                                    Status
-                                                </label>
-                                                <Select defaultValue="all">
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="All statuses" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">
-                                                            All
-                                                        </SelectItem>
-                                                        <SelectItem value="active">
-                                                            Active
-                                                        </SelectItem>
-                                                        <SelectItem value="inactive">
-                                                            Inactive
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-3">
+                                            <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-sm">
+                                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                    Total rules
+                                                </p>
+                                                <p className="mt-2 text-lg font-semibold">
+                                                    {moduleRules.length}
+                                                </p>
                                             </div>
-                                        </>
-                                    }
-                                    pagination={
-                                        <>
-                                            <span>
-                                                {groupedRules[module.id]
-                                                    ?.length ?? 0}{' '}
-                                                rules
-                                            </span>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    disabled
-                                                >
-                                                    Previous
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    disabled
-                                                >
-                                                    Next
-                                                </Button>
+                                            <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-sm">
+                                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                    Active
+                                                </p>
+                                                <p className="mt-2 text-lg font-semibold">
+                                                    {activeRules}
+                                                </p>
                                             </div>
-                                        </>
-                                    }
-                                >
-                                    {groupedRules[module.id]?.length ? (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>
-                                                        Rule type
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Amount
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Effective
-                                                    </TableHead>
-                                                    <TableHead>
+                                            <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-sm">
+                                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                    Per event
+                                                </p>
+                                                <p className="mt-2 text-lg font-semibold">
+                                                    {perEventRules}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        title="Rules"
+                                        description="Expand a row to review more detail about pricing logic."
+                                        className="mt-6 border-border/60 bg-card/80 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.45)]"
+                                        filters={
+                                            <>
+                                                <div className="flex flex-1 flex-col gap-2">
+                                                    <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                        Search rule
+                                                    </label>
+                                                    <Input
+                                                        placeholder="Search by type"
+                                                        className="h-10 bg-background/70"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-1 flex-col gap-2">
+                                                    <label className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                                                         Status
-                                                    </TableHead>
-                                                    <TableHead className="text-right">
-                                                        Actions
-                                                    </TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {groupedRules[module.id].map(
-                                                    (rule) => (
-                                                        <TableRow key={rule.id}>
-                                                            <TableCell className="font-medium">
-                                                                {rule.rule_type.replaceAll(
-                                                                    '_',
-                                                                    ' ',
-                                                                )}
-                                                                {rule.event_type
-                                                                    ? ` (${rule.event_type})`
-                                                                    : ''}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                {rule.currency}{' '}
-                                                                {rule.amount}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                {
-                                                                    rule.effective_from
-                                                                }
-                                                                {rule.effective_to
-                                                                    ? ` → ${rule.effective_to}`
-                                                                    : ''}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <StatusBadge
-                                                                    status={
-                                                                        rule.status
-                                                                    }
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell className="text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger
-                                                                        asChild
-                                                                    >
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="outline"
-                                                                        >
-                                                                            Actions
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem
-                                                                            onSelect={() =>
-                                                                                toast.message(
-                                                                                    'Edit flow coming soon',
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            Edit
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem
-                                                                            onSelect={() =>
-                                                                                handleDeactivate(
+                                                    </label>
+                                                    <Select defaultValue="all">
+                                                        <SelectTrigger className="h-10 bg-background/70">
+                                                            <SelectValue placeholder="All statuses" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">
+                                                                All
+                                                            </SelectItem>
+                                                            <SelectItem value="active">
+                                                                Active
+                                                            </SelectItem>
+                                                            <SelectItem value="inactive">
+                                                                Inactive
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </>
+                                        }
+                                        pagination={
+                                            <>
+                                                <span className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                    {moduleRules.length} rules
+                                                </span>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled
+                                                        className="h-8 px-3"
+                                                    >
+                                                        Previous
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled
+                                                        className="h-8 px-3"
+                                                    >
+                                                        Next
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        }
+                                    >
+                                        {moduleRules.length ? (
+                                            <Table className="text-sm">
+                                                <TableHeader>
+                                                    <TableRow className="border-border/60">
+                                                        <TableHead className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                                            Rule type
+                                                        </TableHead>
+                                                        <TableHead className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                                            Amount
+                                                        </TableHead>
+                                                        <TableHead className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                                            Effective
+                                                        </TableHead>
+                                                        <TableHead className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                                            Status
+                                                        </TableHead>
+                                                        <TableHead className="text-right text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                                            Actions
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {moduleRules.map((rule) => {
+                                                        const isExpanded =
+                                                            expandedRuleIds.has(
+                                                                rule.id,
+                                                            );
+
+                                                        return (
+                                                            <Fragment
+                                                                key={rule.id}
+                                                            >
+                                                                <TableRow
+                                                                    className="border-border/50"
+                                                                >
+                                                                    <TableCell className="font-medium">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                toggleRuleDetails(
                                                                                     rule.id,
                                                                                 )
                                                                             }
+                                                                            className="flex items-center gap-3 text-left"
                                                                         >
-                                                                            Deactivate
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ),
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    ) : (
-                                        <EmptyState
-                                            icon={
-                                                <span className="text-lg">
-                                                    🧾
-                                                </span>
-                                            }
-                                            title="No rules configured"
-                                            description="Create a pricing rule for this module."
-                                            actionLabel="Create rule"
-                                            onAction={() =>
-                                                setIsDialogOpen(true)
-                                            }
-                                        />
-                                    )}
-                                </DataTable>
-                            </TabsContent>
-                        ))}
-                    </Tabs>
+                                                                            <span
+                                                                                className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+                                                                                    isExpanded
+                                                                                        ? 'text-foreground'
+                                                                                        : 'text-muted-foreground'
+                                                                                }`}
+                                                                            >
+                                                                                {isExpanded
+                                                                                    ? '-'
+                                                                                    : '+'}
+                                                                            </span>
+                                                                            <span>
+                                                                                {rule.rule_type.replaceAll(
+                                                                                    '_',
+                                                                                    ' ',
+                                                                                )}
+                                                                                {rule.event_type
+                                                                                    ? ` (${rule.event_type})`
+                                                                                    : ''}
+                                                                            </span>
+                                                                        </button>
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {
+                                                                            rule.currency
+                                                                        }{' '}
+                                                                        {
+                                                                            rule.amount
+                                                                        }
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {
+                                                                            rule.effective_from
+                                                                        }
+                                                                        {rule.effective_to
+                                                                            ? ` → ${rule.effective_to}`
+                                                                            : ''}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <StatusBadge
+                                                                            status={
+                                                                                rule.status
+                                                                            }
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        <div className="flex items-center justify-end gap-2">
+                                                                            <Button
+                                                                                size="sm"
+                                                                                variant="ghost"
+                                                                                className="h-8"
+                                                                                onClick={() =>
+                                                                                    toggleRuleDetails(
+                                                                                        rule.id,
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                Details
+                                                                            </Button>
+                                                                            <DropdownMenu>
+                                                                                <DropdownMenuTrigger
+                                                                                    asChild
+                                                                                >
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        variant="outline"
+                                                                                        className="h-8"
+                                                                                    >
+                                                                                        Actions
+                                                                                    </Button>
+                                                                                </DropdownMenuTrigger>
+                                                                                <DropdownMenuContent align="end">
+                                                                                    <DropdownMenuItem
+                                                                                        onSelect={() =>
+                                                                                            toast.message(
+                                                                                                'Edit flow coming soon',
+                                                                                            )
+                                                                                        }
+                                                                                    >
+                                                                                        Edit
+                                                                                    </DropdownMenuItem>
+                                                                                    <DropdownMenuItem
+                                                                                        onSelect={() =>
+                                                                                            handleDeactivate(
+                                                                                                rule.id,
+                                                                                            )
+                                                                                        }
+                                                                                    >
+                                                                                        Deactivate
+                                                                                    </DropdownMenuItem>
+                                                                                </DropdownMenuContent>
+                                                                            </DropdownMenu>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                                {isExpanded && (
+                                                                    <TableRow
+                                                                        className="border-border/50 bg-muted/30"
+                                                                    >
+                                                                        <TableCell
+                                                                            colSpan={
+                                                                                5
+                                                                            }
+                                                                            className="p-0"
+                                                                        >
+                                                                            <div className="grid gap-4 px-6 py-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                                                                                <div className="space-y-1">
+                                                                                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                                                        Rule id
+                                                                                    </p>
+                                                                                    <p className="font-medium">
+                                                                                        {
+                                                                                            rule.id
+                                                                                        }
+                                                                                    </p>
+                                                                                </div>
+                                                                                <div className="space-y-1">
+                                                                                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                                                        Currency
+                                                                                    </p>
+                                                                                    <p className="font-medium">
+                                                                                        {
+                                                                                            rule.currency
+                                                                                        }
+                                                                                    </p>
+                                                                                </div>
+                                                                                <div className="space-y-1">
+                                                                                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                                                        Event type
+                                                                                    </p>
+                                                                                    <p className="font-medium">
+                                                                                        {rule.event_type ??
+                                                                                            '—'}
+                                                                                    </p>
+                                                                                </div>
+                                                                                <div className="space-y-1">
+                                                                                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                                                                        Effective
+                                                                                    </p>
+                                                                                    <p className="font-medium">
+                                                                                        {
+                                                                                            rule.effective_from
+                                                                                        }
+                                                                                        {rule.effective_to
+                                                                                            ? ` → ${rule.effective_to}`
+                                                                                            : ''}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                )}
+                                                            </Fragment>
+                                                        );
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <EmptyState
+                                                icon={
+                                                    <span className="text-lg">
+                                                        🧾
+                                                    </span>
+                                                }
+                                                title="No rules configured"
+                                                description="Create a pricing rule for this module."
+                                                actionLabel="Create rule"
+                                                onAction={() =>
+                                                    setIsDialogOpen(true)
+                                                }
+                                            />
+                                        )}
+                                    </DataTable>
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
         </AppLayout>
