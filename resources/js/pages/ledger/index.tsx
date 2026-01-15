@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Head, useRemember } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -33,6 +33,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useInertiaResource } from '@/hooks/use-inertia-resource';
 import AppLayout from '@/layouts/app-layout';
 import { getLedgerEvents } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
@@ -89,61 +90,44 @@ const normalizeEvent = (event: LedgerEventRecord): LedgerEvent => ({
 });
 
 export default function LedgerIndex({ ledgerEvents = [] }: LedgerIndexProps) {
-    const [events, setEvents] = useState<LedgerEvent[]>(
-        USE_MOCKS ? [] : ledgerEvents.map(normalizeEvent),
+    const normalizedEvents = useMemo(
+        () => ledgerEvents.map(normalizeEvent),
+        [ledgerEvents],
     );
+
+    const {
+        data: events,
+        isLoading,
+        hasError,
+        refresh: fetchEvents,
+    } = useInertiaResource<LedgerEvent[]>({
+        initialData: normalizedEvents,
+        mockData: [],
+        useMocks: USE_MOCKS,
+        reloadOnly: ['ledgerEvents'],
+        fetcher: getLedgerEvents,
+        onError: () => toast.error('Unable to load ledger events'),
+    });
     const [selectedEvent, setSelectedEvent] = useState<LedgerEvent | null>(
         null,
     );
-    const [isLoading, setIsLoading] = useState(USE_MOCKS);
-    const [hasError, setHasError] = useState(false);
-    const [searchValue, setSearchValue] = useState('');
-    const [eventType, setEventType] = useState('all');
+    const [filters, setFilters] = useRemember(
+        { search: '', eventType: 'all' },
+        'Ledger/Filters',
+    );
 
     const filteredEvents = useMemo(() => {
         return events.filter((event) => {
             const matchesSearch = event.external_reference_id
                 .toLowerCase()
-                .includes(searchValue.toLowerCase());
+                .includes(filters.search.toLowerCase());
             const matchesType =
-                eventType === 'all' || event.event_type === eventType;
+                filters.eventType === 'all' ||
+                event.event_type === filters.eventType;
 
             return matchesSearch && matchesType;
         });
-    }, [events, searchValue, eventType]);
-
-    const fetchEvents = async () => {
-        setHasError(false);
-        if (!USE_MOCKS) {
-            setIsLoading(true);
-            router.reload({ only: ['ledgerEvents'] });
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const response = await getLedgerEvents();
-            setEvents(response);
-        } catch {
-            setHasError(true);
-            toast.error('Unable to load ledger events');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (USE_MOCKS) {
-            fetchEvents();
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!USE_MOCKS) {
-            setEvents(ledgerEvents.map(normalizeEvent));
-            setIsLoading(false);
-        }
-    }, [ledgerEvents]);
+    }, [events, filters.eventType, filters.search]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -190,9 +174,12 @@ export default function LedgerIndex({ ledgerEvents = [] }: LedgerIndexProps) {
                                         External reference
                                     </label>
                                     <Input
-                                        value={searchValue}
+                                        value={filters.search}
                                         onChange={(event) =>
-                                            setSearchValue(event.target.value)
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                search: event.target.value,
+                                            }))
                                         }
                                         placeholder="Search by reference id"
                                     />
@@ -202,8 +189,13 @@ export default function LedgerIndex({ ledgerEvents = [] }: LedgerIndexProps) {
                                         Event type
                                     </label>
                                     <Select
-                                        value={eventType}
-                                        onValueChange={setEventType}
+                                        value={filters.eventType}
+                                        onValueChange={(value) =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                eventType: value,
+                                            }))
+                                        }
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="All event types" />

@@ -1,6 +1,12 @@
 import { type ReactNode } from 'react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
@@ -25,11 +31,7 @@ export function DataTable({
         <Card className={className}>
             <CardHeader>
                 <CardTitle>{title}</CardTitle>
-                {description && (
-                    <p className="text-sm text-muted-foreground">
-                        {description}
-                    </p>
-                )}
+                {description && <CardDescription>{description}</CardDescription>}
             </CardHeader>
             <CardContent className="space-y-4">
                 {filters && (

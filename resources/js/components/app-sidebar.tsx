@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     BookOpen,
     Folder,
@@ -26,37 +26,9 @@ import auditLog from '@/routes/audit-log';
 import ledger from '@/routes/ledger';
 import pricing from '@/routes/pricing';
 import statements from '@/routes/statements';
-import { type NavItem } from '@/types';
+import { type NavItem, type SharedData } from '@/types';
 
 import AppLogo from './app-logo';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Ledger',
-        href: ledger.index(),
-        icon: List,
-    },
-    {
-        title: 'Pricing',
-        href: pricing.index(),
-        icon: Tag,
-    },
-    {
-        title: 'Statements',
-        href: statements.index(),
-        icon: Receipt,
-    },
-    {
-        title: 'Audit Log',
-        href: auditLog.index(),
-        icon: ShieldCheck,
-    },
-];
 
 const footerNavItems: NavItem[] = [
     {
@@ -72,6 +44,41 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { permissions } = usePage<SharedData>().props;
+    const canManagePricing = permissions.includes('manage_pricing');
+
+    const mainNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Ledger',
+            href: ledger.index(),
+            icon: List,
+        },
+        ...(canManagePricing
+            ? [
+                  {
+                      title: 'Pricing',
+                      href: pricing.index(),
+                      icon: Tag,
+                  },
+              ]
+            : []),
+        {
+            title: 'Statements',
+            href: statements.index(),
+            icon: Receipt,
+        },
+        {
+            title: 'Audit Log',
+            href: auditLog.index(),
+            icon: ShieldCheck,
+        },
+    ];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

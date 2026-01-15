@@ -68,6 +68,17 @@ class DemoBulkSeeder extends Seeder
             $accounts->push($primaryAccount);
         }
 
+        $primaryTenantAccounts = $accounts->where('tenant_id', $primaryTenant->id)->values();
+
+        if ($primaryTenantAccounts->count() < 2) {
+            $secondaryAccount = Account::factory()->create([
+                'tenant_id' => $primaryTenant->id,
+            ]);
+
+            $accounts->push($secondaryAccount);
+            $primaryTenantAccounts = $primaryTenantAccounts->push($secondaryAccount)->values();
+        }
+
         $heavyRules = PricingRule::factory()
             ->count(15)
             ->state(function () use ($primaryTenant, $pricingModules): array {
@@ -94,6 +105,15 @@ class DemoBulkSeeder extends Seeder
             })
             ->create();
 
+        $primaryTenantAccounts->each(function (Account $account): void {
+            LedgerEvent::factory()
+                ->count(3)
+                ->create([
+                    'tenant_id' => $account->tenant_id,
+                    'account_id' => $account->id,
+                ]);
+        });
+
         $ledgerEvents->take(50)->each(function (LedgerEvent $event) use ($pricingRules): void {
             $rule = $pricingRules->random();
 
@@ -113,6 +133,20 @@ class DemoBulkSeeder extends Seeder
                 $user->roles()->sync([$roles->random()]);
             }
         };
+
+        $demoAdmin = User::factory()->create([
+            'name' => 'Demo Admin',
+            'email' => 'demo.admin@example.com',
+            'tenant_id' => $primaryTenant->id,
+            'account_id' => null,
+        ]);
+
+        $tenantAdminRole = Role::query()->where('name', 'tenant_admin')->first();
+        if ($tenantAdminRole) {
+            $demoAdmin->roles()->sync([$tenantAdminRole->id]);
+        } else {
+            $assignRole($demoAdmin);
+        }
 
         $primaryUser = User::factory()->create([
             'tenant_id' => $primaryTenant->id,
@@ -164,6 +198,31 @@ class DemoBulkSeeder extends Seeder
                     'note' => 'Primary user activity spike',
                 ],
             ]);
+        });
+
+        $primaryTenantAccounts->take(3)->each(function (Account $account) use ($demoAdmin): void {
+            collect(range(1, 4))->each(function () use ($account, $demoAdmin): void {
+                AuditLog::factory()->create([
+                    'tenant_id' => $account->tenant_id,
+                    'account_id' => $account->id,
+                    'actor_id' => $demoAdmin->id,
+                    'action' => 'ledger_event.ingested',
+                ]);
+            });
+        });
+
+        $primaryTenantAccounts->take(2)->each(function (Account $account) use ($demoAdmin): void {
+            collect(range(1, 3))->each(function () use ($account, $demoAdmin): void {
+                AuditLog::factory()->create([
+                    'tenant_id' => $account->tenant_id,
+                    'account_id' => $account->id,
+                    'actor_id' => $demoAdmin->id,
+                    'action' => 'billing.statement.generated',
+                    'metadata' => [
+                        'note' => 'Demo admin statement generation',
+                    ],
+                ]);
+            });
         });
 
         $statementPeriods = collect(range(0, 5));
@@ -243,6 +302,58 @@ class DemoBulkSeeder extends Seeder
             $statement->update([
                 'total_amount' => $lineItems->sum('total_amount'),
             ]);
+        });
+
+        $primaryTenantAccounts->take(2)->each(function (Account $account) use ($pricingRules, $demoAdmin): void {
+            collect(range(0, 2))->each(function (int $offset) use ($account, $pricingRules): void {
+                $periodStart = now()->subMonths($offset)->startOfMonth();
+                $periodEnd = $periodStart->copy()->endOfMonth();
+
+                $statement = BillingStatement::create([
+                    'tenant_id' => $account->tenant_id,
+                    'account_id' => $account->id,
+                    'period_start' => $periodStart->toDateString(),
+                    'period_end' => $periodEnd->toDateString(),
+                    'status' => BillingStatementStatus::Draft,
+                    'total_amount' => 0,
+                    'currency' => 'USD',
+                    'generated_at' => now(),
+                ]);
+
+                $lineItems = collect(range(1, 2))->map(function () use ($statement, $pricingRules) {
+                    $rule = $pricingRules->random();
+                    $quantity = random_int(1, 4);
+                    $unitAmount = (float) $rule->amount;
+
+                    return BillingLineItem::create([
+                        'billing_statement_id' => $statement->id,
+                        'pricing_rule_id' => $rule->id,
+                        'pricing_module_id' => $rule->pricing_module_id,
+                        'event_type' => $rule->event_type,
+                        'description' => 'Tenant account usage charges',
+                        'quantity' => $quantity,
+                        'unit_amount' => $unitAmount,
+                        'total_amount' => $unitAmount * $quantity,
+                        'currency' => $rule->currency,
+                    ]);
+                });
+
+                $statement->update([
+                    'total_amount' => $lineItems->sum('total_amount'),
+                ]);
+            });
+
+            collect(range(1, 2))->each(function () use ($account, $demoAdmin): void {
+                AuditLog::factory()->create([
+                    'tenant_id' => $account->tenant_id,
+                    'account_id' => $account->id,
+                    'actor_id' => $demoAdmin->id,
+                    'action' => 'billing.statement.generated',
+                    'metadata' => [
+                        'note' => 'Demo admin statement activity',
+                    ],
+                ]);
+            });
         });
     }
 }

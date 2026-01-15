@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Head } from '@inertiajs/react';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -18,6 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useInertiaResource } from '@/hooks/use-inertia-resource';
 import AppLayout from '@/layouts/app-layout';
 import { getDashboardSnapshot } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
@@ -52,44 +53,21 @@ const mapMetrics = (metrics: DashboardProps['metrics']): DashboardSnapshot => ({
 });
 
 export default function Dashboard({ metrics }: DashboardProps) {
-    const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(
-        USE_MOCKS ? null : mapMetrics(metrics),
-    );
-    const [isLoading, setIsLoading] = useState(USE_MOCKS);
-    const [hasError, setHasError] = useState(false);
+    const normalizedMetrics = useMemo(() => mapMetrics(metrics), [metrics]);
 
-    const fetchSnapshot = async () => {
-        setHasError(false);
-        if (!USE_MOCKS) {
-            setIsLoading(true);
-            router.reload({ only: ['metrics'] });
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const response = await getDashboardSnapshot();
-            setSnapshot(response);
-        } catch {
-            setHasError(true);
-            toast.error('Unable to load dashboard data');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (USE_MOCKS) {
-            fetchSnapshot();
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!USE_MOCKS) {
-            setSnapshot(mapMetrics(metrics));
-            setIsLoading(false);
-        }
-    }, [metrics]);
+    const {
+        data: snapshot,
+        isLoading,
+        hasError,
+        refresh: fetchSnapshot,
+    } = useInertiaResource<DashboardSnapshot | null>({
+        initialData: normalizedMetrics,
+        mockData: null,
+        useMocks: USE_MOCKS,
+        reloadOnly: ['metrics'],
+        fetcher: getDashboardSnapshot,
+        onError: () => toast.error('Unable to load dashboard data'),
+    });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

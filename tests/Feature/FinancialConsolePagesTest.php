@@ -50,8 +50,14 @@ test('authorized users can view financial console pages', function () {
 
     $this->actingAs($user);
 
-    $this->get(route('dashboard'))->assertOk();
-    $this->get(route('ledger.index'))->assertOk();
+    $this->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+        );
+    $this->get(route('ledger.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('ledger/index')
+        );
     $this->get(route('pricing.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('pricing/index')
@@ -60,7 +66,16 @@ test('authorized users can view financial console pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('pricing/show')
         );
-    $this->get(route('statements.index'))->assertOk();
-    $this->get(route('audit-log.index'))->assertOk();
-    $this->get(route('statements.show', $statement))->assertOk();
+    $this->get(route('statements.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('statements/index')
+        );
+    $this->get(route('audit-log.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('audit-log/index')
+        );
+    $this->get(route('statements.show', $statement))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('statements/show')
+        );
 });

@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { useCallback, useEffect, useState } from 'react';
+import { Head, Link } from '@inertiajs/react';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useInertiaResource } from '@/hooks/use-inertia-resource';
 import AppLayout from '@/layouts/app-layout';
 import { getStatementDetail } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/config';
@@ -75,46 +76,27 @@ export default function StatementShow({
     statement: serverStatement,
     lineItems = [],
 }: StatementShowProps) {
-    const [statement, setStatement] = useState<StatementDetail | null>(
-        USE_MOCKS || !serverStatement
-            ? null
-            : normalizeStatement(serverStatement, lineItems),
-    );
-    const [isLoading, setIsLoading] = useState(USE_MOCKS);
-    const [hasError, setHasError] = useState(false);
-
-    const fetchStatement = useCallback(async () => {
-        setHasError(false);
-        if (!USE_MOCKS) {
-            setIsLoading(true);
-            router.reload({ only: ['statement', 'lineItems'] });
-            return;
+    const normalizedStatement = useMemo(() => {
+        if (!serverStatement) {
+            return null;
         }
 
-        setIsLoading(true);
-        try {
-            const response = await getStatementDetail(serverStatement?.id ?? 0);
-            setStatement(response);
-        } catch {
-            setHasError(true);
-            toast.error('Unable to load statement details');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [serverStatement?.id]);
+        return normalizeStatement(serverStatement, lineItems);
+    }, [lineItems, serverStatement]);
 
-    useEffect(() => {
-        if (USE_MOCKS) {
-            fetchStatement();
-        }
-    }, [fetchStatement]);
-
-    useEffect(() => {
-        if (!USE_MOCKS && serverStatement) {
-            setStatement(normalizeStatement(serverStatement, lineItems));
-            setIsLoading(false);
-        }
-    }, [serverStatement, lineItems]);
+    const {
+        data: statement,
+        isLoading,
+        hasError,
+        refresh: fetchStatement,
+    } = useInertiaResource<StatementDetail | null>({
+        initialData: normalizedStatement,
+        mockData: null,
+        useMocks: USE_MOCKS,
+        reloadOnly: ['statement', 'lineItems'],
+        fetcher: () => getStatementDetail(serverStatement?.id ?? 0),
+        onError: () => toast.error('Unable to load statement details'),
+    });
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -148,9 +130,9 @@ export default function StatementShow({
                     }
                     actions={
                         <Button variant="outline" asChild>
-                            <a href={statements.index().url}>
+                            <Link href={statements.index().url}>
                                 Back to statements
-                            </a>
+                            </Link>
                         </Button>
                     }
                 />
