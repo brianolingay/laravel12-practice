@@ -2,6 +2,10 @@
 
 ## Getting Started
 
+### Product Walkthrough
+
+Watch the quick intro video: https://jam.dev/c/8d36cc88-be4c-496d-94f3-8770a03ca2f0
+
 ### Migrations & Seeders
 
 ```bash
@@ -9,11 +13,7 @@ php artisan migrate
 php artisan db:seed
 ```
 
-Seeded demo users (password: `secret`):
-
-- `admin@diagnostically.test`
-- `tenant@lab.test`
-- `account@client.test`
+`db:seed` runs `RolesPermissionsSeeder` and `DemoBulkSeeder`, generating bulk sample tenants, accounts, pricing rules, ledger events, audit logs, and statements. User accounts are created with random emails and the default password `password`.
 
 ### Generate Statements
 
@@ -53,6 +53,12 @@ curl -X POST http://localhost/api/ledger/events \
     "metadata": {"source": "lab"}
   }'
 ```
+
+## Financial Console UI
+
+- Pages implemented: Dashboard, Ledger Explorer, Pricing Rules, Statements, Audit Log.
+- Toggle mock data via `resources/js/lib/config.ts` (`USE_MOCKS = true | false`).
+- Update navigation in `resources/js/components/app-sidebar.tsx`.
 
 ## Notes
 
