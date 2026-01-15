@@ -70,7 +70,7 @@ export default function Dashboard({ metrics }: DashboardProps) {
         try {
             const response = await getDashboardSnapshot();
             setSnapshot(response);
-        } catch (error) {
+        } catch {
             setHasError(true);
             toast.error('Unable to load dashboard data');
         } finally {

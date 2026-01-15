@@ -179,7 +179,7 @@ export default function PricingRulesIndex({
             ]);
             setModules(moduleResponse);
             setRules(ruleResponse);
-        } catch (error) {
+        } catch {
             setHasError(true);
             toast.error('Unable to load pricing rules');
         } finally {
@@ -208,7 +208,7 @@ export default function PricingRulesIndex({
                 module_id: String(activeModuleId),
             }));
         }
-    }, [isDialogOpen, activeModuleId]);
+    }, [isDialogOpen, activeModuleId, formData.module_id]);
 
     const handleCreateRule = () => {
         const errors: Record<string, string> = {};

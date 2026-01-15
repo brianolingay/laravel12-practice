@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DataTable } from '@/components/data-table';
@@ -83,7 +83,7 @@ export default function StatementShow({
     const [isLoading, setIsLoading] = useState(USE_MOCKS);
     const [hasError, setHasError] = useState(false);
 
-    const fetchStatement = async () => {
+    const fetchStatement = useCallback(async () => {
         setHasError(false);
         if (!USE_MOCKS) {
             setIsLoading(true);
@@ -95,19 +95,19 @@ export default function StatementShow({
         try {
             const response = await getStatementDetail(serverStatement?.id ?? 0);
             setStatement(response);
-        } catch (error) {
+        } catch {
             setHasError(true);
             toast.error('Unable to load statement details');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [serverStatement?.id]);
 
     useEffect(() => {
         if (USE_MOCKS) {
             fetchStatement();
         }
-    }, []);
+    }, [fetchStatement]);
 
     useEffect(() => {
         if (!USE_MOCKS && serverStatement) {

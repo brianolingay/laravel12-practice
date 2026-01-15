@@ -124,7 +124,7 @@ export default function LedgerIndex({ ledgerEvents = [] }: LedgerIndexProps) {
         try {
             const response = await getLedgerEvents();
             setEvents(response);
-        } catch (error) {
+        } catch {
             setHasError(true);
             toast.error('Unable to load ledger events');
         } finally {

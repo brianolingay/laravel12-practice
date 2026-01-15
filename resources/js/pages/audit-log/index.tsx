@@ -78,7 +78,7 @@ export default function AuditLogIndex({ auditLogs = [] }: AuditLogProps) {
         try {
             const response = await getAuditLogs();
             setLogs(response);
-        } catch (error) {
+        } catch {
             setHasError(true);
             toast.error('Unable to load audit logs');
         } finally {

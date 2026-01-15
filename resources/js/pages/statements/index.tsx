@@ -98,7 +98,7 @@ export default function StatementsIndex({
         try {
             const response = await getStatements();
             setStatementsList(response);
-        } catch (error) {
+        } catch {
             setHasError(true);
             toast.error('Unable to load statements');
         } finally {
@@ -136,7 +136,7 @@ export default function StatementsIndex({
             if (USE_MOCKS) {
                 fetchStatements();
             }
-        } catch (error) {
+        } catch {
             toast.error('Statement generation failed.');
         }
     };
@@ -164,7 +164,7 @@ export default function StatementsIndex({
                     }),
                 );
             }
-        } catch (error) {
+        } catch {
             toast.error('Unable to update status.');
         }
     };
